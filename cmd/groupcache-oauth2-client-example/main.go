@@ -64,6 +64,8 @@ func main() {
 
 	client := clientcredentials.New(options)
 
+	metrics(client)
+
 	if app.concurrent {
 		//
 		// concurrent requests
