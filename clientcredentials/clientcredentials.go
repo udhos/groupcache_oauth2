@@ -17,6 +17,9 @@ import (
 	"github.com/udhos/groupcache_exporter/groupcache/modernprogram"
 )
 
+// DefaultGroupCacheSizeBytes is default group cache size when unspecified.
+const DefaultGroupCacheSizeBytes = 10_000_000
+
 // Options define client options.
 type Options struct {
 	TokenURL     string
@@ -34,8 +37,14 @@ type Options struct {
 	//
 	SoftExpireInSeconds int
 
+	// GroupcacheWorkspace is required.
 	GroupcacheWorkspace *groupcache.Workspace
-	GroupcacheName      string
+
+	// If unspecified, defaults to oauth2.
+	GroupcacheName string
+
+	// If unspecified, defaults to 10MB.
+	GroupcacheSizeBytes int64
 
 	// Logging function, if undefined defaults to log.Printf
 	Logf func(format string, v ...any)
@@ -52,6 +61,10 @@ type Client struct {
 
 // New creates a client.
 func New(options Options) *Client {
+	if options.GroupcacheWorkspace == nil {
+		panic("groupcache workspace is nil")
+	}
+
 	switch options.SoftExpireInSeconds {
 	case 0:
 		options.SoftExpireInSeconds = 10
@@ -67,7 +80,10 @@ func New(options Options) *Client {
 		options: options,
 	}
 
-	cacheSizeBytes := int64(1_000) // FIXME
+	cacheSizeBytes := options.GroupcacheSizeBytes
+	if cacheSizeBytes == 0 {
+		cacheSizeBytes = DefaultGroupCacheSizeBytes
+	}
 
 	cacheName := options.GroupcacheName
 	if cacheName == "" {
