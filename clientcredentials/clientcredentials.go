@@ -35,6 +35,7 @@ type Options struct {
 	SoftExpireInSeconds int
 
 	GroupcacheWorkspace *groupcache.Workspace
+	GroupcacheName      string
 
 	// Logging function, if undefined defaults to log.Printf
 	Logf func(format string, v ...any)
@@ -68,7 +69,12 @@ func New(options Options) *Client {
 
 	cacheSizeBytes := int64(1_000) // FIXME
 
-	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, "oauth2", cacheSizeBytes, groupcache.GetterFunc(
+	cacheName := options.GroupcacheName
+	if cacheName == "" {
+		cacheName = "oauth2"
+	}
+
+	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, cacheName, cacheSizeBytes, groupcache.GetterFunc(
 		func(ctx context.Context, key string, dest groupcache.Sink) error {
 
 			info, errTok := c.fetchToken(ctx)
