@@ -22,12 +22,28 @@ const DefaultGroupCacheSizeBytes = 10_000_000
 
 // Options define client options.
 type Options struct {
-	TokenURL     string
-	ClientID     string
-	ClientSecret string
-	Scope        string
-	HTTPClient   *http.Client
+	// TokenURL is the resource server's token endpoint
+	// URL. This is a constant specific to each server.
+	TokenURL string
 
+	// ClientID is the application's ID.
+	ClientID string
+
+	// ClientSecret is the application's secret.
+	ClientSecret string
+
+	// Scope specifies optional space-separated requested permissions.
+	Scope string
+
+	// HTTPClient provides the HTTP client to use to request tokens.
+	// If unspecified, defaults to http.DefaultClient.
+	HTTPClient *http.Client
+
+	// SoftExpireInSeconds specifies how early before hard expiration the
+	// token should be considered expired to trigger renewal. This
+	// prevents from using an expired token due to clock
+	// differences.
+	//
 	// 0 defaults to 10 seconds. Set to -1 to no soft expire.
 	//
 	// Example: consider expire_in = 30 seconds and soft expire = 10 seconds.
@@ -37,19 +53,19 @@ type Options struct {
 	//
 	SoftExpireInSeconds int
 
-	// GroupcacheWorkspace is required.
+	// GroupcacheWorkspace is required groupcache workspace.
 	GroupcacheWorkspace *groupcache.Workspace
 
-	// If unspecified, defaults to oauth2.
+	// GroupcacheName gives a unique cache name. If unspecified, defaults to oauth2.
 	GroupcacheName string
 
-	// If unspecified, defaults to 10MB.
+	// GroupcacheSizeBytes limits the cache size. If unspecified, defaults to 10MB.
 	GroupcacheSizeBytes int64
 
-	// Logging function, if undefined defaults to log.Printf
+	// Logf provides logging function, if undefined defaults to log.Printf
 	Logf func(format string, v ...any)
 
-	// Enable debug logging.
+	// Debug enables debug logging.
 	Debug bool
 }
 
@@ -63,6 +79,10 @@ type Client struct {
 func New(options Options) *Client {
 	if options.GroupcacheWorkspace == nil {
 		panic("groupcache workspace is nil")
+	}
+
+	if options.HTTPClient == nil {
+		options.HTTPClient = http.DefaultClient
 	}
 
 	switch options.SoftExpireInSeconds {
