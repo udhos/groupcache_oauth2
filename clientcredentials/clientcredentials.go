@@ -20,6 +20,11 @@ import (
 // DefaultGroupCacheSizeBytes is default group cache size when unspecified.
 const DefaultGroupCacheSizeBytes = 10_000_000
 
+// HTTPClientDoer interface allows the caller to easily plug in a custom http client.
+type HTTPClientDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // Options define client options.
 type Options struct {
 	// TokenURL is the resource server's token endpoint
@@ -35,9 +40,9 @@ type Options struct {
 	// Scope specifies optional space-separated requested permissions.
 	Scope string
 
-	// HTTPClient provides the HTTP client to use to request tokens.
+	// HTTPClient provides the actual HTTP client to use.
 	// If unspecified, defaults to http.DefaultClient.
-	HTTPClient *http.Client
+	HTTPClient HTTPClientDoer
 
 	// SoftExpireInSeconds specifies how early before hard expiration the
 	// token should be considered expired to trigger renewal. This
@@ -145,7 +150,10 @@ func (c *Client) debugf(format string, v ...any) {
 	}
 }
 
-// Do sends an HTTP request.
+// Do sends an HTTP request and returns an HTTP response.
+// The actual HTTPClient provided in the Options is used to make the requests
+// and also to retrieve the required client_credentials token.
+// Do retrieves the token and renews it as necessary for making the request.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	ctx := req.Context()
