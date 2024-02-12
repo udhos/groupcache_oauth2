@@ -1,6 +1,6 @@
 module github.com/udhos/groupcache_oauth2
 
-go 1.21.6
+go 1.22.0
 
 require (
 	github.com/modernprogram/groupcache/v2 v2.5.5

@@ -580,7 +580,7 @@ func newTokenServer(serverInfo *serverStat, clientID, clientSecret, token string
 }
 
 func newTokenServerBroken(serverInfo *serverStat) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ /*r*/ *http.Request) {
 		serverInfo.inc()
 		httpJSON(w, "broken-token", http.StatusOK)
 	}))

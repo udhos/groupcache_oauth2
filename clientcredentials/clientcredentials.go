@@ -44,6 +44,14 @@ type Options struct {
 	// If unspecified, defaults to http.DefaultClient.
 	HTTPClient HTTPClientDoer
 
+	// HTTPStatusOkMin is the minimum token server response status code accepted as Ok.
+	// If undefined, defaults to 200.
+	HTTPStatusOkMin int
+
+	// HTTPStatusOkMax is the maximum token server response status code accepted as Ok.
+	// If undefined, defaults to 299.
+	HTTPStatusOkMax int
+
 	// SoftExpireInSeconds specifies how early before hard expiration the
 	// token should be considered expired to trigger renewal. This
 	// prevents from using an expired token due to clock
@@ -97,6 +105,13 @@ func New(options Options) *Client {
 		options.SoftExpireInSeconds = 0
 	}
 
+	if options.HTTPStatusOkMin == 0 {
+		options.HTTPStatusOkMin = 200
+	}
+	if options.HTTPStatusOkMax == 0 {
+		options.HTTPStatusOkMax = 299
+	}
+
 	if options.Logf == nil {
 		options.Logf = log.Printf
 	}
@@ -116,7 +131,7 @@ func New(options Options) *Client {
 	}
 
 	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, cacheName, cacheSizeBytes, groupcache.GetterFunc(
-		func(ctx context.Context, key string, dest groupcache.Sink) error {
+		func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
 
 			info, errTok := c.fetchToken(ctx)
 			if errTok != nil {
@@ -232,8 +247,8 @@ func (c *Client) fetchToken(ctx context.Context) (tokenInfo, error) {
 
 	c.debugf("%s: elapsed:%v token: %s", me, elap, string(body))
 
-	if resp.StatusCode != 200 {
-		return ti, fmt.Errorf("status:%d body:%v", resp.StatusCode, string(body))
+	if resp.StatusCode < c.options.HTTPStatusOkMin || resp.StatusCode > c.options.HTTPStatusOkMax {
+		return ti, fmt.Errorf("bad token server response http status: status:%d body:%v", resp.StatusCode, string(body))
 	}
 
 	{
