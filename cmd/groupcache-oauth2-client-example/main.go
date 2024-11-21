@@ -28,6 +28,7 @@ type application struct {
 	interval          time.Duration
 	concurrent        bool
 	debug             bool
+	purgeExpired      bool
 }
 
 func main() {
@@ -46,6 +47,7 @@ func main() {
 	flag.DurationVar(&app.interval, "interval", 2*time.Second, "interval between sends")
 	flag.BoolVar(&app.concurrent, "concurrent", false, "concurrent requests")
 	flag.BoolVar(&app.debug, "debug", false, "enable debug logging")
+	flag.BoolVar(&app.purgeExpired, "purgeExpired", true, "purge all expired items when the oldest item is removed")
 
 	flag.Parse()
 
@@ -60,6 +62,7 @@ func main() {
 		SoftExpireInSeconds: app.softExpireSeconds,
 		Debug:               app.debug,
 		GroupcacheWorkspace: groupcacheWorkspace,
+		DisablePurgeExpired: !app.purgeExpired,
 	}
 
 	client := clientcredentials.New(options)

@@ -80,6 +80,9 @@ type Options struct {
 
 	// Debug enables debug logging.
 	Debug bool
+
+	// DisablePurgeExpired disables removing all expired items when the oldest item is removed.
+	DisablePurgeExpired bool
 }
 
 // Client is context for invokations with client-credentials flow.
@@ -130,7 +133,7 @@ func New(options Options) *Client {
 		cacheName = "oauth2"
 	}
 
-	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, cacheName, cacheSizeBytes, groupcache.GetterFunc(
+	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, cacheName, !options.DisablePurgeExpired, cacheSizeBytes, groupcache.GetterFunc(
 		func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
 
 			info, errTok := c.fetchToken(ctx)
