@@ -83,6 +83,12 @@ type Options struct {
 
 	// DisablePurgeExpired disables removing all expired items when the oldest item is removed.
 	DisablePurgeExpired bool
+
+	// GroupcacheMainCacheWeight defaults to 8 if unspecified.
+	GroupcacheMainCacheWeight int64
+
+	// GroupcacheHotCacheWeight defaults to 1 if unspecified.
+	GroupcacheHotCacheWeight int64
 }
 
 // Client is context for invokations with client-credentials flow.
@@ -133,25 +139,30 @@ func New(options Options) *Client {
 		cacheName = "oauth2"
 	}
 
-	group := groupcache.NewGroupWithWorkspace(options.GroupcacheWorkspace, cacheName, !options.DisablePurgeExpired, cacheSizeBytes, groupcache.GetterFunc(
-		func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
+	o := groupcache.Options{
+		Workspace:    options.GroupcacheWorkspace,
+		Name:         cacheName,
+		PurgeExpired: !options.DisablePurgeExpired,
+		CacheBytes:   cacheSizeBytes,
+		Getter: groupcache.GetterFunc(
+			func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
 
-			info, errTok := c.fetchToken(ctx)
-			if errTok != nil {
-				return errTok
-			}
+				info, errTok := c.fetchToken(ctx)
+				if errTok != nil {
+					return errTok
+				}
 
-			softExpire := time.Duration(options.SoftExpireInSeconds) * time.Second
+				softExpire := time.Duration(options.SoftExpireInSeconds) * time.Second
 
-			expire := time.Now().Add(info.expiresIn - softExpire)
+				expire := time.Now().Add(info.expiresIn - softExpire)
 
-			if errSet := dest.SetString(info.accessToken, expire); errSet != nil {
-				return errSet
-			}
+				return dest.SetString(info.accessToken, expire)
+			}),
+		MainCacheWeight: options.GroupcacheMainCacheWeight,
+		HotCacheWeight:  options.GroupcacheHotCacheWeight,
+	}
 
-			return nil
-		}),
-	)
+	group := groupcache.NewGroupWithWorkspace(o)
 
 	c.group = group
 
