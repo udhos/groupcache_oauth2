@@ -84,6 +84,11 @@ type Options struct {
 	// DisablePurgeExpired disables removing all expired items when the oldest item is removed.
 	DisablePurgeExpired bool
 
+	// ExpiredKeysEvictionInterval sets interval for periodic eviction of expired keys.
+	// If unset, defaults to 30-minute period.
+	// Set to -1 to disable periodic eviction of expired keys.
+	ExpiredKeysEvictionInterval time.Duration
+
 	// GroupcacheMainCacheWeight defaults to 8 if unspecified.
 	GroupcacheMainCacheWeight int64
 
@@ -140,10 +145,11 @@ func New(options Options) *Client {
 	}
 
 	o := groupcache.Options{
-		Workspace:    options.GroupcacheWorkspace,
-		Name:         cacheName,
-		PurgeExpired: !options.DisablePurgeExpired,
-		CacheBytes:   cacheSizeBytes,
+		Workspace:                   options.GroupcacheWorkspace,
+		Name:                        cacheName,
+		PurgeExpired:                !options.DisablePurgeExpired,
+		ExpiredKeysEvictionInterval: options.ExpiredKeysEvictionInterval,
+		CacheBytesLimit:             cacheSizeBytes,
 		Getter: groupcache.GetterFunc(
 			func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
 
