@@ -29,6 +29,7 @@ type application struct {
 	concurrent        bool
 	debug             bool
 	purgeExpired      bool
+	credsFromHeader   bool
 }
 
 func main() {
@@ -48,21 +49,23 @@ func main() {
 	flag.BoolVar(&app.concurrent, "concurrent", false, "concurrent requests")
 	flag.BoolVar(&app.debug, "debug", false, "enable debug logging")
 	flag.BoolVar(&app.purgeExpired, "purgeExpired", true, "purge all expired items when the oldest item is removed")
+	flag.BoolVar(&app.credsFromHeader, "credsFromHeader", false, "get creds from header")
 
 	flag.Parse()
 
 	groupcacheWorkspace := startGroupcache()
 
 	options := clientcredentials.Options{
-		TokenURL:            app.tokenURL,
-		ClientID:            app.clientID,
-		ClientSecret:        app.clientSecret,
-		Scope:               app.scope,
-		HTTPClient:          http.DefaultClient,
-		SoftExpireInSeconds: app.softExpireSeconds,
-		Debug:               app.debug,
-		GroupcacheWorkspace: groupcacheWorkspace,
-		DisablePurgeExpired: !app.purgeExpired,
+		TokenURL:                        app.tokenURL,
+		ClientID:                        app.clientID,
+		ClientSecret:                    app.clientSecret,
+		Scope:                           app.scope,
+		HTTPClient:                      http.DefaultClient,
+		SoftExpireInSeconds:             app.softExpireSeconds,
+		Debug:                           app.debug,
+		GroupcacheWorkspace:             groupcacheWorkspace,
+		DisablePurgeExpired:             !app.purgeExpired,
+		GetCredentialsFromRequestHeader: app.credsFromHeader,
 	}
 
 	client := clientcredentials.New(options)
@@ -101,6 +104,11 @@ func send(app *application, client *clientcredentials.Client, i int) {
 		app.targetURL, bytes.NewBufferString(app.targetBody))
 	if errReq != nil {
 		log.Fatalf("%s: request: %v", label, errReq)
+	}
+
+	if app.credsFromHeader {
+		req.Header.Set("oauth2-client-id", app.clientID)
+		req.Header.Set("oauth2-client-secret", app.clientSecret)
 	}
 
 	resp, errDo := client.Do(req)

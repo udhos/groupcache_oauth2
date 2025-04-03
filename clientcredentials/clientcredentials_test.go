@@ -98,12 +98,12 @@ func TestClientCredentials(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send 1
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend != nil {
 			t.Errorf("send 1: %v", errSend)
 		}
@@ -117,7 +117,63 @@ func TestClientCredentials(t *testing.T) {
 
 	// send 2
 
-	_, errSend2 := send(client, srv.URL)
+	_, errSend2 := send(client, srv.URL, nil)
+	if errSend2 != nil {
+		t.Errorf("send 2: %v", errSend2)
+	}
+	if tokenServerStat.count != 1 {
+		t.Errorf("send 2: unexpected token server access count: %d", tokenServerStat.count)
+	}
+	if serverStat.count != 2 {
+		t.Errorf("send 2: unexpected server access count: %d", serverStat.count)
+	}
+}
+
+// go test -run TestCredsFromHeader ./...
+func TestCredsFromHeader(t *testing.T) {
+
+	clientID := "clientID"
+	clientSecret := "clientSecret"
+	token := "abc"
+	expireIn := 60
+	softExpire := 0
+
+	tokenServerStat := serverStat{}
+	serverStat := serverStat{}
+
+	ts := newTokenServer(&tokenServerStat, clientID, clientSecret, token, expireIn)
+	defer ts.Close()
+
+	validToken := func(t string) bool { return t == token }
+
+	srv := newServer(&serverStat, validToken)
+	defer srv.Close()
+
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, true)
+
+	h := map[string]string{
+		"oauth2-client-id":     clientID,
+		"oauth2-client-secret": clientSecret,
+	}
+
+	// send 1
+
+	{
+		_, errSend := send(client, srv.URL, h)
+		if errSend != nil {
+			t.Errorf("send 1: %v", errSend)
+		}
+		if tokenServerStat.count != 1 {
+			t.Errorf("send 1: unexpected token server access count: %d", tokenServerStat.count)
+		}
+		if serverStat.count != 1 {
+			t.Errorf("send 1: unexpected server access count: %d", serverStat.count)
+		}
+	}
+
+	// send 2
+
+	_, errSend2 := send(client, srv.URL, h)
 	if errSend2 != nil {
 		t.Errorf("send 2: %v", errSend2)
 	}
@@ -148,7 +204,7 @@ func TestConcurrency(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	var wg sync.WaitGroup
 
@@ -157,7 +213,7 @@ func TestConcurrency(t *testing.T) {
 		go func() {
 
 			for j := 0; j < 100; j++ {
-				_, errSend := send(client, srv.URL)
+				_, errSend := send(client, srv.URL, nil)
 				if errSend != nil {
 					t.Errorf("send1: %v", errSend)
 				}
@@ -189,12 +245,12 @@ func TestClientCredentialsExpiration(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send 1
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend != nil {
 			t.Errorf("send: %v", errSend)
 		}
@@ -209,7 +265,7 @@ func TestClientCredentialsExpiration(t *testing.T) {
 	// send 2
 
 	{
-		_, errSend2 := send(client, srv.URL)
+		_, errSend2 := send(client, srv.URL, nil)
 		if errSend2 != nil {
 			t.Errorf("send: %v", errSend2)
 		}
@@ -241,12 +297,12 @@ func TestForcedExpiration(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send 1: get first token
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend != nil {
 			t.Errorf("send: %v", errSend)
 		}
@@ -261,7 +317,7 @@ func TestForcedExpiration(t *testing.T) {
 	// send 2: get cached token
 
 	{
-		_, errSend2 := send(client, srv.URL)
+		_, errSend2 := send(client, srv.URL, nil)
 		if errSend2 != nil {
 			t.Errorf("send: %v", errSend2)
 		}
@@ -278,7 +334,7 @@ func TestForcedExpiration(t *testing.T) {
 	token = "broken"
 
 	{
-		result, errSend3 := send(client, srv.URL)
+		result, errSend3 := send(client, srv.URL, nil)
 		if errSend3 == nil {
 			t.Errorf("unexpected send sucesss")
 		}
@@ -298,7 +354,7 @@ func TestForcedExpiration(t *testing.T) {
 	token = "abc"
 
 	{
-		_, errSend3 := send(client, srv.URL)
+		_, errSend3 := send(client, srv.URL, nil)
 		if errSend3 != nil {
 			t.Errorf("send: %v", errSend3)
 		}
@@ -326,12 +382,12 @@ func TestServerBrokenURL(t *testing.T) {
 	ts := newTokenServer(&tokenServerStat, clientID, clientSecret, token, expireIn)
 	defer ts.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send
 
 	{
-		_, errSend := send(client, "broken-url")
+		_, errSend := send(client, "broken-url", nil)
 		if errSend == nil {
 			t.Errorf("unexpected success from broken server")
 		}
@@ -358,11 +414,11 @@ func TestTokenServerBrokenURL(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient("broken-url", clientID, clientSecret, softExpire)
+	client := newClient("broken-url", clientID, clientSecret, softExpire, false)
 
 	// send 1
 
-	_, errSend := send(client, srv.URL)
+	_, errSend := send(client, srv.URL, nil)
 	if errSend == nil {
 		t.Errorf("unexpected send success")
 	}
@@ -386,12 +442,12 @@ func TestBrokenTokenServer(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send 1
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend == nil {
 			t.Errorf("unexpected success with broken token server")
 		}
@@ -406,7 +462,7 @@ func TestBrokenTokenServer(t *testing.T) {
 	// send 2
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend == nil {
 			t.Errorf("unexpected success with broken token server")
 		}
@@ -439,12 +495,12 @@ func TestLockedTokenServer(t *testing.T) {
 	srv := newServer(&serverStat, validToken)
 	defer srv.Close()
 
-	client := newClient(ts.URL, clientID, clientSecret, softExpire)
+	client := newClient(ts.URL, clientID, clientSecret, softExpire, false)
 
 	// send 1
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend == nil {
 			t.Errorf("unexpected success with locked token server")
 		}
@@ -459,7 +515,7 @@ func TestLockedTokenServer(t *testing.T) {
 	// send 2
 
 	{
-		_, errSend := send(client, srv.URL)
+		_, errSend := send(client, srv.URL, nil)
 		if errSend == nil {
 			t.Errorf("unexpected success with locked token server")
 		}
@@ -477,13 +533,18 @@ type sendResult struct {
 	status int
 }
 
-func send(client *Client, serverURL string) (sendResult, error) {
+func send(client *Client, serverURL string, h map[string]string) (sendResult, error) {
 
 	var result sendResult
 
 	req, errReq := http.NewRequestWithContext(context.TODO(), "GET", serverURL, nil)
 	if errReq != nil {
 		return result, fmt.Errorf("request: %v", errReq)
+	}
+
+	for k, v := range h {
+		//log.Printf("send: header=%s value=%s", k, v)
+		req.Header.Set(k, v)
 	}
 
 	resp, errDo := client.Do(req)
@@ -586,16 +647,19 @@ func newTokenServerBroken(serverInfo *serverStat) *httptest.Server {
 	}))
 }
 
-func newClient(tokenURL, clientID, clientSecret string, softExpire int) *Client {
+func newClient(tokenURL, clientID, clientSecret string, softExpire int,
+	credsFromHeader bool) *Client {
 
 	options := Options{
-		TokenURL:            tokenURL,
-		ClientID:            clientID,
-		ClientSecret:        clientSecret,
-		Scope:               "scope1 scope2",
-		HTTPClient:          http.DefaultClient,
-		SoftExpireInSeconds: softExpire,
-		GroupcacheWorkspace: groupcache.NewWorkspace(),
+		TokenURL:                        tokenURL,
+		ClientID:                        clientID,
+		ClientSecret:                    clientSecret,
+		Scope:                           "scope1 scope2",
+		HTTPClient:                      http.DefaultClient,
+		SoftExpireInSeconds:             softExpire,
+		GroupcacheWorkspace:             groupcache.NewWorkspace(),
+		GetCredentialsFromRequestHeader: credsFromHeader,
+		Debug:                           true,
 	}
 
 	client := New(options)
