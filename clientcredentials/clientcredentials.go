@@ -31,10 +31,10 @@ type Options struct {
 	// URL. This is a constant specific to each server.
 	TokenURL string
 
-	// ClientID is the application's ID.
+	// ClientID is the application's ID. See also GetCredentialsFromRequestHeader.
 	ClientID string
 
-	// ClientSecret is the application's secret.
+	// ClientSecret is the application's secret. See also GetCredentialsFromRequestHeader.
 	ClientSecret string
 
 	// Scope specifies optional space-separated requested permissions.
@@ -94,12 +94,26 @@ type Options struct {
 
 	// GroupcacheHotCacheWeight defaults to 1 if unspecified.
 	GroupcacheHotCacheWeight int64
+
+	// GetCredentialsFromRequestHeader enables retrieving client credentials from headers.
+	// If enabled, static credentials ClientID and ClientSecret are ignored.
+	GetCredentialsFromRequestHeader bool
+
+	// ForwardHeaderCredentials forwards consumed sensitive credentials headers.
+	ForwardHeaderCredentials bool
+
+	// HeaderClientID defaults to "oauth2-client-id".
+	HeaderClientID string
+
+	// HeaderClientSecret defaults to "oauth2-client-secret".
+	HeaderClientSecret string
 }
 
 // Client is context for invokations with client-credentials flow.
 type Client struct {
-	options Options
-	group   *groupcache.Group
+	options        Options
+	group          *groupcache.Group
+	getCredentials func(arg interface{}) (string, string)
 }
 
 // New creates a client.
@@ -130,8 +144,27 @@ func New(options Options) *Client {
 		options.Logf = log.Printf
 	}
 
+	if options.HeaderClientID == "" {
+		options.HeaderClientID = "oauth2-client-id"
+	}
+
+	if options.HeaderClientSecret == "" {
+		options.HeaderClientSecret = "oauth2-client-secret"
+	}
+
 	c := &Client{
 		options: options,
+	}
+
+	if options.GetCredentialsFromRequestHeader {
+		c.getCredentials = func(arg interface{}) (string, string) {
+			h := arg.(http.Header)
+			id := h.Get(options.HeaderClientID)
+			secret := h.Get(options.HeaderClientSecret)
+
+			c.debugf("getCredentials: id=%s secret=%s", id, secret)
+			return id, secret
+		}
 	}
 
 	cacheSizeBytes := options.GroupcacheSizeBytes
@@ -151,18 +184,19 @@ func New(options Options) *Client {
 		ExpiredKeysEvictionInterval: options.ExpiredKeysEvictionInterval,
 		CacheBytesLimit:             cacheSizeBytes,
 		Getter: groupcache.GetterFunc(
-			func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink) error {
+			func(ctx context.Context, _ /*key*/ string, dest groupcache.Sink,
+				info *groupcache.Info) error {
 
-				info, errTok := c.fetchToken(ctx)
+				ti, errTok := c.fetchToken(ctx, info)
 				if errTok != nil {
 					return errTok
 				}
 
 				softExpire := time.Duration(options.SoftExpireInSeconds) * time.Second
 
-				expire := time.Now().Add(info.expiresIn - softExpire)
+				expire := time.Now().Add(ti.expiresIn - softExpire)
 
-				return dest.SetString(info.accessToken, expire)
+				return dest.SetString(ti.accessToken, expire)
 			}),
 		MainCacheWeight: options.GroupcacheMainCacheWeight,
 		HotCacheWeight:  options.GroupcacheHotCacheWeight,
@@ -193,9 +227,16 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	ctx := req.Context()
 
-	accessToken, errToken := c.getToken(ctx)
+	accessToken, errToken := c.getToken(ctx, req.Header)
 	if errToken != nil {
 		return nil, errToken
+	}
+
+	if c.options.GetCredentialsFromRequestHeader &&
+		!c.options.ForwardHeaderCredentials {
+		// do not forward sensitive consumed headers
+		delete(req.Header, c.options.HeaderClientID)
+		delete(req.Header, c.options.HeaderClientSecret)
 	}
 
 	resp, errResp := c.send(req, accessToken)
@@ -221,23 +262,45 @@ func (c *Client) send(req *http.Request, accessToken string) (*http.Response, er
 	return c.options.HTTPClient.Do(req)
 }
 
-func (c *Client) getToken(ctx context.Context) (string, error) {
+func (c *Client) getToken(ctx context.Context, h http.Header) (string, error) {
+	var info *groupcache.Info
+	var id, secret string
+
+	if c.getCredentials != nil {
+		id, secret = c.getCredentials(h)
+		info = &groupcache.Info{Ctx1: id, Ctx2: secret}
+	} else {
+		id = c.options.ClientID
+	}
+
+	c.debugf("credentialsFromHeader:%t func:%v clientID=%s clientSecret=%s",
+		c.options.GetCredentialsFromRequestHeader, c.getCredentials, id, secret)
+
 	var accessToken string
-	errGet := c.group.Get(ctx, c.options.ClientID, groupcache.StringSink(&accessToken))
+	errGet := c.group.Get(ctx, id, groupcache.StringSink(&accessToken), info)
 	return accessToken, errGet
 }
 
 // fetchToken actually retrieves token from token server.
-func (c *Client) fetchToken(ctx context.Context) (tokenInfo, error) {
+func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenInfo, error) {
 
 	const me = "fetchToken"
 
 	begin := time.Now()
 
+	var clientID, clientSecret string
+	if info == nil {
+		clientID = c.options.ClientID
+		clientSecret = c.options.ClientSecret
+	} else {
+		clientID = info.Ctx1
+		clientSecret = info.Ctx2
+	}
+
 	form := url.Values{}
 	form.Add("grant_type", "client_credentials")
-	form.Add("client_id", c.options.ClientID)
-	form.Add("client_secret", c.options.ClientSecret)
+	form.Add("client_id", clientID)
+	form.Add("client_secret", clientSecret)
 	if c.options.Scope != "" {
 		form.Add("scope", c.options.Scope)
 	}
