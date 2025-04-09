@@ -7,7 +7,7 @@ toolchain go1.24.2 // preferred
 require (
 	github.com/modernprogram/groupcache/v2 v2.7.1
 	github.com/prometheus/client_golang v1.22.0
-	github.com/udhos/groupcache_exporter v1.0.10
+	github.com/udhos/groupcache_exporter v1.1.0
 )
 
 require (
