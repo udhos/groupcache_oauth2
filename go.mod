@@ -1,20 +1,18 @@
 module github.com/udhos/groupcache_oauth2
 
-go 1.23.8 // minimum
-
-toolchain go1.24.2 // preferred
+go 1.24.2
 
 require (
-	github.com/modernprogram/groupcache/v2 v2.7.1
+	github.com/modernprogram/groupcache/v2 v2.7.2
 	github.com/prometheus/client_golang v1.22.0
-	github.com/udhos/groupcache_exporter v1.1.1
+	github.com/udhos/groupcache_exporter v1.1.2
 )
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
