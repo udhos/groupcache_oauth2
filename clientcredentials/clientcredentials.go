@@ -107,6 +107,16 @@ type Options struct {
 
 	// HeaderClientSecret defaults to "oauth2-client-secret".
 	HeaderClientSecret string
+
+	// IsBadTokenStatus checks if the server response status is bad token.
+	// If undefined, defaults to DefaultBadTokenStatusFunc that just checks for 401.
+	IsBadTokenStatus func(status int) bool
+}
+
+// DefaultBadTokenStatusFunc is used as default when option IsBadTokenStatus is left undefined.
+// DefaultBadTokenStatusFunc reports if status is 401.
+func DefaultBadTokenStatusFunc(status int) bool {
+	return status == 401
 }
 
 // Client is context for invokations with client-credentials flow.
@@ -150,6 +160,10 @@ func New(options Options) *Client {
 
 	if options.HeaderClientSecret == "" {
 		options.HeaderClientSecret = "oauth2-client-secret"
+	}
+
+	if options.IsBadTokenStatus == nil {
+		options.IsBadTokenStatus = DefaultBadTokenStatusFunc
 	}
 
 	c := &Client{
@@ -244,7 +258,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		return resp, errResp
 	}
 
-	if resp.StatusCode == 401 {
+	if c.options.IsBadTokenStatus(resp.StatusCode) {
 		//
 		// the server refused our token, so we expire it in order to
 		// renew it at the next invokation.
