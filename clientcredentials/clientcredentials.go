@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/modernprogram/groupcache/v2"
-	"github.com/udhos/groupcache_exporter/groupcache/modernprogram"
 )
 
 // DefaultGroupCacheSizeBytes is default group cache size when unspecified.
@@ -409,26 +408,4 @@ func parseToken(buf []byte, debugf func(format string, v ...any)) (tokenInfo, er
 	}
 
 	return info, nil
-}
-
-/*
-MetricsExporter creates a metrics exporter for Prometheus.
-
-Usage example
-
-	exporter := client.MetricsExporter()
-	labels := map[string]string{
-		"app": "app1",
-	}
-	namespace := ""
-	collector := groupcache_exporter.NewExporter(namespace, labels, exporter)
-	prometheus.MustRegister(collector)
-	go func() {
-		http.Handle(metricsRoute, promhttp.Handler())
-		log.Fatal(http.ListenAndServe(metricsPort, nil))
-	}()
-*/
-func (c *Client) MetricsExporter() *modernprogram.Group {
-	exporter := modernprogram.New(c.group)
-	return exporter
 }
