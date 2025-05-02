@@ -70,7 +70,7 @@ func main() {
 
 	client := clientcredentials.New(options)
 
-	metrics(client)
+	metrics(groupcacheWorkspace)
 
 	if app.concurrent {
 		//
