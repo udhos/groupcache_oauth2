@@ -2,10 +2,12 @@ module github.com/udhos/groupcache_oauth2
 
 go 1.24.6
 
+toolchain go1.25.0
+
 require (
-	github.com/modernprogram/groupcache/v2 v2.7.8
+	github.com/modernprogram/groupcache/v2 v2.7.9
 	github.com/prometheus/client_golang v1.23.0
-	github.com/udhos/groupcache_exporter v1.3.5
+	github.com/udhos/groupcache_exporter v1.3.6
 )
 
 require (
@@ -17,5 +19,5 @@ require (
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
+	google.golang.org/protobuf v1.36.8 // indirect
 )
