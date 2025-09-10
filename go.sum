@@ -35,8 +35,8 @@ github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8 h1:u+kxnRXxx+
 github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8/go.mod h1:6M53rd6DvbzoLbFnL3bjCsDSkCYh4i2yqW04hxr1/5o=
 github.com/udhos/groupcache_exporter v1.3.6 h1:ct2tpScJkDzutnFXiHMHHH4SfdOklNBr/ViSiTW5lDc=
 github.com/udhos/groupcache_exporter v1.3.6/go.mod h1:BlfA0ggX7jwC1D7bzIqf0QvouLm0votRhv2piApIR7k=
-github.com/udhos/oauth2clientcredentials v0.0.4 h1:W4hbP6ZOfQxNGh2NjtWb6thMrfydYh7fT34yLIh2prc=
-github.com/udhos/oauth2clientcredentials v0.0.4/go.mod h1:Ws1bHti26noWyS4gt/xSF7kqEGJlMh3MUhDQTmXDDaE=
+github.com/udhos/oauth2clientcredentials v0.0.5 h1:VH5xW2LwehpiTzk1X3koQnuHo23x0a7FbItHDlN8TFw=
+github.com/udhos/oauth2clientcredentials v0.0.5/go.mod h1:Ws1bHti26noWyS4gt/xSF7kqEGJlMh3MUhDQTmXDDaE=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.yaml.in/yaml/v2 v2.4.2 h1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=

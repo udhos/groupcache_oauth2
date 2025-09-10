@@ -36,7 +36,7 @@ func main() {
 
 	app := application{}
 
-	flag.StringVar(&app.tokenURL, "tokenURL", "http://localhost:8080/oauth/token", "token URL")
+	flag.StringVar(&app.tokenURL, "tokenURL", "http://localhost:8080/token", "token URL")
 	flag.StringVar(&app.clientID, "clientID", "admin", "client ID")
 	flag.StringVar(&app.clientSecret, "clientSecret", "admin", "client secret")
 	flag.StringVar(&app.scope, "scope", "", "space-delimited list of scopes")

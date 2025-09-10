@@ -4,7 +4,6 @@ package clientcredentials
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"time"
@@ -40,13 +39,9 @@ type Options struct {
 	// If unspecified, defaults to http.DefaultClient.
 	HTTPClient HTTPClientDoer
 
-	// HTTPStatusOkMin is the minimum token server response status code accepted as Ok.
-	// If undefined, defaults to 200.
-	HTTPStatusOkMin int
-
-	// HTTPStatusOkMax is the maximum token server response status code accepted as Ok.
-	// If undefined, defaults to 299.
-	HTTPStatusOkMax int
+	// IsTokenHTTPStatusCodeOk checks if the token server response status is successful.
+	// If undefined, defaults to checking for 200 <= status < 300.
+	IsTokenHTTPStatusCodeOk func(status int) bool
 
 	// SoftExpireInSeconds specifies how early before hard expiration the
 	// token should be considered expired to trigger renewal. This
@@ -137,13 +132,6 @@ func New(options Options) *Client {
 		options.SoftExpireInSeconds = 10
 	case -1:
 		options.SoftExpireInSeconds = 0
-	}
-
-	if options.HTTPStatusOkMin == 0 {
-		options.HTTPStatusOkMin = 200
-	}
-	if options.HTTPStatusOkMax == 0 {
-		options.HTTPStatusOkMax = 299
 	}
 
 	if options.Logf == nil {
@@ -309,30 +297,24 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 
 	var ti tokenInfo
 
-	resp, errDo := cc.SendRequest(ctx, c.options.HTTPClient, c.options.TokenURL,
-		clientID, clientSecret, c.options.Scope)
+	reqOptions := cc.RequestOptions{
+		HTTPClient:     c.options.HTTPClient,
+		TokenURL:       c.options.TokenURL,
+		ClientID:       clientID,
+		ClientSecret:   clientSecret,
+		Scope:          c.options.Scope,
+		IsStatusCodeOK: c.options.IsTokenHTTPStatusCodeOk,
+	}
+
+	tokenResp, errDo := cc.SendRequest(ctx, reqOptions)
 	if errDo != nil {
 		return ti, errDo
-	}
-	defer resp.Body.Close()
-
-	body, errBody := io.ReadAll(resp.Body)
-	if errBody != nil {
-		return ti, errBody
 	}
 
 	elap := time.Since(begin)
 
-	c.debugf("%s: elapsed:%v token: %s", me, elap, string(body))
+	c.debugf("%s: elapsed:%v token:%v", me, elap, tokenResp)
 
-	if resp.StatusCode < c.options.HTTPStatusOkMin || resp.StatusCode > c.options.HTTPStatusOkMax {
-		return ti, fmt.Errorf("bad token server response http status: status:%d body:%v", resp.StatusCode, string(body))
-	}
-
-	tokenResp, errDecode := cc.DecodeResponseBody(body)
-	if errDecode != nil {
-		return ti, fmt.Errorf("decode token response: %v", errDecode)
-	}
 	if tokenResp.AccessToken == "" {
 		return ti, fmt.Errorf("missing access_token in token response")
 	}

@@ -8,7 +8,7 @@ require (
 	github.com/modernprogram/groupcache/v2 v2.7.9
 	github.com/prometheus/client_golang v1.23.2
 	github.com/udhos/groupcache_exporter v1.3.6
-	github.com/udhos/oauth2clientcredentials v0.0.4
+	github.com/udhos/oauth2clientcredentials v0.0.5
 )
 
 require (
