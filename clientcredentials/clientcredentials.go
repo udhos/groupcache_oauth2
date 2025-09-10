@@ -3,17 +3,14 @@ package clientcredentials
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/modernprogram/groupcache/v2"
+	cc "github.com/udhos/oauth2clientcredentials/clientcredentials"
 )
 
 // DefaultGroupCacheSizeBytes is default group cache size when unspecified.
@@ -310,25 +307,10 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 		clientSecret = info.Ctx2
 	}
 
-	form := url.Values{}
-	form.Add("grant_type", "client_credentials")
-	form.Add("client_id", clientID)
-	form.Add("client_secret", clientSecret)
-	if c.options.Scope != "" {
-		form.Add("scope", c.options.Scope)
-	}
-
 	var ti tokenInfo
 
-	req, errReq := http.NewRequestWithContext(ctx, "POST", c.options.TokenURL,
-		strings.NewReader(form.Encode()))
-	if errReq != nil {
-		return ti, errReq
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, errDo := c.options.HTTPClient.Do(req)
+	resp, errDo := cc.SendRequest(ctx, c.options.HTTPClient, c.options.TokenURL,
+		clientID, clientSecret, c.options.Scope)
 	if errDo != nil {
 		return ti, errDo
 	}
@@ -347,13 +329,16 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 		return ti, fmt.Errorf("bad token server response http status: status:%d body:%v", resp.StatusCode, string(body))
 	}
 
-	{
-		var errParse error
-		ti, errParse = parseToken(body, c.debugf)
-		if errParse != nil {
-			return ti, fmt.Errorf("parse token: %v", errParse)
-		}
+	tokenResp, errDecode := cc.DecodeResponseBody(body)
+	if errDecode != nil {
+		return ti, fmt.Errorf("decode token response: %v", errDecode)
 	}
+	if tokenResp.AccessToken == "" {
+		return ti, fmt.Errorf("missing access_token in token response")
+	}
+
+	ti.accessToken = tokenResp.AccessToken
+	ti.expiresIn = time.Duration(tokenResp.ExpiresIn) * time.Second
 
 	return ti, nil
 }
@@ -361,51 +346,4 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 type tokenInfo struct {
 	accessToken string
 	expiresIn   time.Duration
-}
-
-func parseToken(buf []byte, debugf func(format string, v ...any)) (tokenInfo, error) {
-	var info tokenInfo
-
-	var data map[string]interface{}
-
-	errJSON := json.Unmarshal(buf, &data)
-	if errJSON != nil {
-		return info, errJSON
-	}
-
-	accessToken, foundToken := data["access_token"]
-	if !foundToken {
-		return info, fmt.Errorf("missing access_token field in token response")
-	}
-
-	tokenStr, isStr := accessToken.(string)
-	if !isStr {
-		return info, fmt.Errorf("non-string value for access_token field in token response")
-	}
-
-	if tokenStr == "" {
-		return info, fmt.Errorf("empty access_token in token response")
-	}
-
-	info.accessToken = tokenStr
-
-	expire, foundExpire := data["expires_in"]
-	if foundExpire {
-		switch expireVal := expire.(type) {
-		case float64:
-			debugf("found expires_in field with %f seconds", expireVal)
-			info.expiresIn = time.Second * time.Duration(expireVal)
-		case string:
-			debugf("found expires_in field with %s seconds", expireVal)
-			exp, errConv := strconv.Atoi(expireVal)
-			if errConv != nil {
-				return info, fmt.Errorf("error converting expires_in field from string='%s' to int: %v", expireVal, errConv)
-			}
-			info.expiresIn = time.Second * time.Duration(exp)
-		default:
-			return info, fmt.Errorf("unexpected type %T for expires_in field in token response", expire)
-		}
-	}
-
-	return info, nil
 }

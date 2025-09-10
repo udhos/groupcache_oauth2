@@ -1,13 +1,14 @@
 module github.com/udhos/groupcache_oauth2
 
-go 1.24.6
+go 1.24.7
 
-toolchain go1.25.0
+toolchain go1.25.1
 
 require (
 	github.com/modernprogram/groupcache/v2 v2.7.9
 	github.com/prometheus/client_golang v1.23.0
 	github.com/udhos/groupcache_exporter v1.3.6
+	github.com/udhos/oauth2clientcredentials v0.0.2
 )
 
 require (
