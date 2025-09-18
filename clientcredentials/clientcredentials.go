@@ -87,8 +87,17 @@ type Options struct {
 	GroupcacheHotCacheWeight int64
 
 	// GetCredentialsFromRequestHeader enables retrieving client credentials from headers.
-	// If enabled, static credentials ClientID and ClientSecret are ignored.
 	GetCredentialsFromRequestHeader bool
+
+	// GetCredentialsFromRequestHeaderDontFallbackToStatic when using GetCredentialsFromRequestHeader,
+	// disables fallback to static ClientID and ClientSecret when headers are missing.
+	//
+	// If this is false (default), and the expected headers are missing,
+	// then static ClientID and ClientSecret are used as fallback.
+	//
+	// If this is true, and the expected headers are missing, then the
+	// call will likely fail due to missing credentials.
+	GetCredentialsFromRequestHeaderDontFallbackToStatic bool
 
 	// ForwardHeaderCredentials forwards consumed sensitive credentials headers.
 	ForwardHeaderCredentials bool
@@ -114,7 +123,7 @@ func DefaultBadTokenStatusFunc(status int) bool {
 type Client struct {
 	options        Options
 	group          *groupcache.Group
-	getCredentials func(arg interface{}) (string, string)
+	getCredentials func(arg any) (string, string)
 }
 
 // New creates a client.
@@ -155,10 +164,19 @@ func New(options Options) *Client {
 	}
 
 	if options.GetCredentialsFromRequestHeader {
-		c.getCredentials = func(arg interface{}) (string, string) {
+		c.getCredentials = func(arg any) (string, string) {
 			h := arg.(http.Header)
 			id := h.Get(options.HeaderClientID)
 			secret := h.Get(options.HeaderClientSecret)
+
+			if !options.GetCredentialsFromRequestHeaderDontFallbackToStatic {
+				if id == "" {
+					id = options.ClientID
+				}
+				if secret == "" {
+					secret = options.ClientSecret
+				}
+			}
 
 			c.debugf("getCredentials: id=%s secret=%s", id, secret)
 			return id, secret
