@@ -119,6 +119,62 @@ func TestCredsFromHeader(t *testing.T) {
 	}
 }
 
+// go test -count 1 -run ^TestCredsFromHeaderWrong$ ./...
+func TestCredsFromHeaderWrong(t *testing.T) {
+
+	clientID := "clientID"
+	clientSecret := "clientSecret"
+	token := "abc"
+	expireIn := 60
+	softExpire := 0
+
+	tokenServerStat := serverStat{}
+	serverStat := serverStat{}
+
+	ts := newTokenServer(&tokenServerStat, clientID, clientSecret, token, expireIn)
+	defer ts.Close()
+
+	validToken := func(t string) bool { return t == token }
+
+	srv := newServer(&serverStat, validToken)
+	defer srv.Close()
+
+	client := newClient(ts.URL, "clientIDWrong", "clientSecretWrong", softExpire, true)
+
+	h := map[string]string{
+		"oauth2-client-id":     "wrong-id",
+		"oauth2-client-secret": "wrong-secret",
+	}
+
+	// send 1
+
+	{
+		_, errSend := send(client, srv.URL, h)
+		if errSend == nil {
+			t.Fatalf("unexpected success")
+		}
+		if tokenServerStat.count != 1 {
+			t.Errorf("send 1: unexpected token server access count: %d", tokenServerStat.count)
+		}
+		if serverStat.count != 0 {
+			t.Errorf("send 1: unexpected server access count: %d", serverStat.count)
+		}
+	}
+
+	// send 2
+
+	_, errSend2 := send(client, srv.URL, h)
+	if errSend2 == nil {
+		t.Fatalf("unexpected success")
+	}
+	if tokenServerStat.count != 2 {
+		t.Errorf("send 2: unexpected token server access count: %d", tokenServerStat.count)
+	}
+	if serverStat.count != 0 {
+		t.Errorf("send 2: unexpected server access count: %d", serverStat.count)
+	}
+}
+
 // go test -count 1 -run ^TestCredsFromHeaderWithFallback$ ./...
 func TestCredsFromHeaderWithFallback(t *testing.T) {
 
