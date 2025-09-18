@@ -41,7 +41,7 @@ type Options struct {
 
 	// IsTokenHTTPStatusCodeOk checks if the token server response status is successful.
 	// If undefined, defaults to checking for 200 <= status < 300.
-	IsTokenHTTPStatusCodeOk func(status int) bool
+	IsTokenHTTPStatusCodeOk func(status int) error
 
 	// SoftExpireInSeconds specifies how early before hard expiration the
 	// token should be considered expired to trigger renewal. This
