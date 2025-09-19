@@ -250,9 +250,12 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	if c.options.GetCredentialsFromRequestHeader &&
 		!c.options.ForwardHeaderCredentials {
-		// do not forward sensitive consumed headers
-		delete(req.Header, c.options.HeaderClientID)
-		delete(req.Header, c.options.HeaderClientSecret)
+		// do not forward sensitive consumed header
+		/*
+			c.debugf("Client.Do: removing sensitive header: %s=%s",
+				c.options.HeaderClientSecret, req.Header.Get(c.options.HeaderClientSecret))
+		*/
+		req.Header.Del(c.options.HeaderClientSecret)
 	}
 
 	resp, errResp := c.send(req, accessToken)
@@ -289,8 +292,10 @@ func (c *Client) getToken(ctx context.Context, h http.Header) (string, error) {
 		id = c.options.ClientID
 	}
 
-	c.debugf("credentialsFromHeader:%t func:%v clientID=%s clientSecret=%s",
-		c.options.GetCredentialsFromRequestHeader, c.getCredentials, id, secret)
+	/*
+		c.debugf("credentialsFromHeader:%t func:%v clientID='%s' clientSecret='%s'",
+			c.options.GetCredentialsFromRequestHeader, c.getCredentials, id, secret)
+	*/
 
 	var accessToken string
 	errGet := c.group.Get(ctx, id, groupcache.StringSink(&accessToken), info)
@@ -300,9 +305,10 @@ func (c *Client) getToken(ctx context.Context, h http.Header) (string, error) {
 // fetchToken actually retrieves token from token server.
 func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenInfo, error) {
 
-	const me = "fetchToken"
-
-	begin := time.Now()
+	/*
+		const me = "fetchToken"
+		begin := time.Now()
+	*/
 
 	var clientID, clientSecret string
 	if info == nil {
@@ -329,9 +335,10 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 		return ti, errDo
 	}
 
-	elap := time.Since(begin)
-
-	c.debugf("%s: elapsed:%v token:%v", me, elap, tokenResp)
+	/*
+		elap := time.Since(begin)
+		c.debugf("%s: elapsed:%v token:%v", me, elap, tokenResp)
+	*/
 
 	if tokenResp.AccessToken == "" {
 		return ti, fmt.Errorf("missing access_token in token response")

@@ -106,7 +106,6 @@ func TestCredsFromHeader(t *testing.T) {
 	}
 
 	// send 2
-
 	_, errSend2 := send(client, srv.URL, h)
 	if errSend2 != nil {
 		t.Errorf("send 2: %v", errSend2)
@@ -585,8 +584,9 @@ func send(client *Client, serverURL string, h map[string]string) (sendResult, er
 		return result, fmt.Errorf("request: %v", errReq)
 	}
 
+	const clientSecretHeaderKey = "oauth2-client-secret"
+
 	for k, v := range h {
-		//log.Printf("send: header=%s value=%s", k, v)
 		req.Header.Set(k, v)
 	}
 
@@ -595,6 +595,12 @@ func send(client *Client, serverURL string, h map[string]string) (sendResult, er
 		return result, fmt.Errorf("do: %v", errDo)
 	}
 	defer resp.Body.Close()
+
+	if hasClientSecretHeaderAfter := req.Header.Get(clientSecretHeaderKey) != ""; hasClientSecretHeaderAfter {
+		err := fmt.Errorf("sensitive client secret header not removed: %s=%s",
+			clientSecretHeaderKey, req.Header.Get(clientSecretHeaderKey))
+		return result, err
+	}
 
 	body, errBody := io.ReadAll(resp.Body)
 	if errBody != nil {
