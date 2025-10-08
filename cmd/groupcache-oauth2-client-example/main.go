@@ -111,11 +111,16 @@ func send(app *application, client *clientcredentials.Client, i int) {
 		req.Header.Set("oauth2-client-secret", app.clientSecret)
 	}
 
-	resp, errDo := client.Do(req)
+	out := client.DoWithOutput(req)
+
+	resp, errDo := out.Response, out.Error
+
 	if errDo != nil {
 		log.Fatalf("%s: do: %v", label, errDo)
 	}
 	defer resp.Body.Close()
+
+	log.Printf("%s: used clientID: %s", label, out.ClientID)
 
 	log.Printf("%s: status: %d", label, resp.StatusCode)
 

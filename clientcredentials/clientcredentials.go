@@ -99,8 +99,13 @@ type Options struct {
 	// call will likely fail due to missing credentials.
 	GetCredentialsFromRequestHeaderDontFallbackToStatic bool
 
-	// ForwardHeaderCredentials forwards consumed sensitive credentials headers.
-	ForwardHeaderCredentials bool
+	// ForwardHeaderClientSecret forwards consumed sensitive header ClientSecret.
+	// Sensitive header ClientSecret is not forwarded by default.
+	ForwardHeaderClientSecret bool
+
+	// PreventForwardingHeaderClientID prevents forwarding header ClientID.
+	// Header ClientID is forwarded by default.
+	PreventForwardingHeaderClientID bool
 
 	// HeaderClientID defaults to "oauth2-client-id".
 	HeaderClientID string
@@ -239,29 +244,59 @@ func (c *Client) debugf(format string, v ...any) {
 // The actual HTTPClient provided in the Options is used to make the requests
 // and also to retrieve the required client_credentials token.
 // Do retrieves the token and renews it as necessary for making the request.
+// See also DoWithOutput, which returns more information including the used ClientID.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	out := c.DoWithOutput(req)
+	return out.Response, out.Error
+}
+
+// Output is the result of DoWithOutput.
+type Output struct {
+	// ClientID is the client ID that was used for oauth2 client-credentials flow.
+	// It might be the static one from Options or retrieved from per-request HTTP header.
+	ClientID string
+	// Response is the HTTP response.
+	Response *http.Response
+	// Error is the error, if any.
+	Error error
+}
+
+// DoWithOutput sends an HTTP request and returns an HTTP response.
+// The actual HTTPClient provided in the Options is used to make the requests
+// and also to retrieve the required client_credentials token.
+// DoWithOutput retrieves the token and renews it as necessary for making the request.
+// See also Do, which returns just the response and error.
+func (c *Client) DoWithOutput(req *http.Request) Output {
+	var out Output
 
 	ctx := req.Context()
 
-	accessToken, errToken := c.getToken(ctx, req.Header)
+	accessToken, clientID, errToken := c.getToken(ctx, req.Header)
 	if errToken != nil {
-		return nil, errToken
+		out.Error = errToken
+		return out
 	}
 
-	if c.options.GetCredentialsFromRequestHeader &&
-		!c.options.ForwardHeaderCredentials {
-		// do not forward sensitive consumed header
-		/*
-			c.debugf("Client.Do: removing sensitive header: %s=%s",
-				c.options.HeaderClientSecret, req.Header.Get(c.options.HeaderClientSecret))
-		*/
-		req.Header.Del(c.options.HeaderClientSecret)
+	out.ClientID = clientID
+
+	if c.options.GetCredentialsFromRequestHeader {
+		if !c.options.ForwardHeaderClientSecret {
+			// do not forward sensitive consumed header
+			req.Header.Del(c.options.HeaderClientSecret)
+		}
+		if c.options.PreventForwardingHeaderClientID {
+			// do not forward consumed header
+			req.Header.Del(c.options.HeaderClientID)
+		}
 	}
 
 	resp, errResp := c.send(req, accessToken)
 	if errResp != nil {
-		return resp, errResp
+		out.Error = errResp
+		return out
 	}
+
+	out.Response = resp
 
 	if c.options.IsBadTokenStatus(resp.StatusCode) {
 		//
@@ -273,7 +308,8 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	return resp, errResp
+	return out
+
 }
 
 func (c *Client) send(req *http.Request, accessToken string) (*http.Response, error) {
@@ -281,34 +317,23 @@ func (c *Client) send(req *http.Request, accessToken string) (*http.Response, er
 	return c.options.HTTPClient.Do(req)
 }
 
-func (c *Client) getToken(ctx context.Context, h http.Header) (string, error) {
+func (c *Client) getToken(ctx context.Context, h http.Header) (accessToken, clientID string, err error) {
 	var info *groupcache.Info
-	var id, secret string
+	var secret string
 
 	if c.getCredentials != nil {
-		id, secret = c.getCredentials(h)
-		info = &groupcache.Info{Ctx1: id, Ctx2: secret}
+		clientID, secret = c.getCredentials(h)
+		info = &groupcache.Info{Ctx1: clientID, Ctx2: secret}
 	} else {
-		id = c.options.ClientID
+		clientID = c.options.ClientID
 	}
 
-	/*
-		c.debugf("credentialsFromHeader:%t func:%v clientID='%s' clientSecret='%s'",
-			c.options.GetCredentialsFromRequestHeader, c.getCredentials, id, secret)
-	*/
-
-	var accessToken string
-	errGet := c.group.Get(ctx, id, groupcache.StringSink(&accessToken), info)
-	return accessToken, errGet
+	err = c.group.Get(ctx, clientID, groupcache.StringSink(&accessToken), info)
+	return
 }
 
 // fetchToken actually retrieves token from token server.
 func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenInfo, error) {
-
-	/*
-		const me = "fetchToken"
-		begin := time.Now()
-	*/
 
 	var clientID, clientSecret string
 	if info == nil {

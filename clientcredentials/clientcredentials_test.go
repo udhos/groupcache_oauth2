@@ -93,7 +93,7 @@ func TestCredsFromHeader(t *testing.T) {
 	// send 1
 
 	{
-		_, errSend := send(client, srv.URL, h)
+		result, errSend := send(client, srv.URL, h)
 		if errSend != nil {
 			t.Errorf("send 1: %v", errSend)
 		}
@@ -103,10 +103,13 @@ func TestCredsFromHeader(t *testing.T) {
 		if serverStat.count != 1 {
 			t.Errorf("send 1: unexpected server access count: %d", serverStat.count)
 		}
+		if result.clientID != clientID {
+			t.Errorf("send 1: unexpected clientID: %s", result.clientID)
+		}
 	}
 
 	// send 2
-	_, errSend2 := send(client, srv.URL, h)
+	result, errSend2 := send(client, srv.URL, h)
 	if errSend2 != nil {
 		t.Errorf("send 2: %v", errSend2)
 	}
@@ -115,6 +118,9 @@ func TestCredsFromHeader(t *testing.T) {
 	}
 	if serverStat.count != 2 {
 		t.Errorf("send 2: unexpected server access count: %d", serverStat.count)
+	}
+	if result.clientID != clientID {
+		t.Errorf("send 2: unexpected clientID: %s", result.clientID)
 	}
 }
 
@@ -571,8 +577,9 @@ func TestLockedTokenServer(t *testing.T) {
 }
 
 type sendResult struct {
-	body   string
-	status int
+	body     string
+	clientID string
+	status   int
 }
 
 func send(client *Client, serverURL string, h map[string]string) (sendResult, error) {
@@ -590,11 +597,16 @@ func send(client *Client, serverURL string, h map[string]string) (sendResult, er
 		req.Header.Set(k, v)
 	}
 
-	resp, errDo := client.Do(req)
+	out := client.DoWithOutput(req)
+
+	resp, errDo := out.Response, out.Error
+
 	if errDo != nil {
 		return result, fmt.Errorf("do: %v", errDo)
 	}
 	defer resp.Body.Close()
+
+	result.clientID = out.ClientID
 
 	if hasClientSecretHeaderAfter := req.Header.Get(clientSecretHeaderKey) != ""; hasClientSecretHeaderAfter {
 		err := fmt.Errorf("sensitive client secret header not removed: %s=%s",
