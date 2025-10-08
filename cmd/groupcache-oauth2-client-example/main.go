@@ -30,6 +30,7 @@ type application struct {
 	debug             bool
 	purgeExpired      bool
 	credsFromHeader   bool
+	simpleDo          bool
 }
 
 func main() {
@@ -50,6 +51,7 @@ func main() {
 	flag.BoolVar(&app.debug, "debug", false, "enable debug logging")
 	flag.BoolVar(&app.purgeExpired, "purgeExpired", true, "purge all expired items when the oldest item is removed")
 	flag.BoolVar(&app.credsFromHeader, "credsFromHeader", false, "get creds from header")
+	flag.BoolVar(&app.simpleDo, "simpleDo", false, "use simple Do instead of DoWithOutput")
 
 	flag.Parse()
 
@@ -111,16 +113,25 @@ func send(app *application, client *clientcredentials.Client, i int) {
 		req.Header.Set("oauth2-client-secret", app.clientSecret)
 	}
 
-	out := client.DoWithOutput(req)
+	var resp *http.Response
+	var errDo error
+	var clientID string
 
-	resp, errDo := out.Response, out.Error
+	if app.simpleDo {
+		resp, errDo = client.Do(req)
+	} else {
+		out := client.DoWithOutput(req)
+		resp, clientID, errDo = out.Response, out.ClientID, out.Error
+	}
 
 	if errDo != nil {
 		log.Fatalf("%s: do: %v", label, errDo)
 	}
 	defer resp.Body.Close()
 
-	log.Printf("%s: used clientID: %s", label, out.ClientID)
+	if !app.simpleDo {
+		log.Printf("%s: DoWithOutput: used clientID: %s", label, clientID)
+	}
 
 	log.Printf("%s: status: %d", label, resp.StatusCode)
 

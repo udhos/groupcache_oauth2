@@ -360,11 +360,6 @@ func (c *Client) fetchToken(ctx context.Context, info *groupcache.Info) (tokenIn
 		return ti, errDo
 	}
 
-	/*
-		elap := time.Since(begin)
-		c.debugf("%s: elapsed:%v token:%v", me, elap, tokenResp)
-	*/
-
 	if tokenResp.AccessToken == "" {
 		return ti, fmt.Errorf("missing access_token in token response")
 	}
