@@ -6,13 +6,32 @@
 
 https://github.com/udhos/groupcache_oauth2 implements the oauth2 client_credentials flow cacheing tokens with [groupcache](https://github.com/modernprogram/groupcache).
 
-# Usage
+# Synopsis
 
-FIXME WRITEME
+See full example: [cmd/groupcache-oauth2-client-example/main.go](cmd/groupcache-oauth2-client-example/main.go).
 
-# Example client
+```go
+import "github.com/udhos/groupcache_oauth2/clientcredentials"
 
-See [cmd/groupcache-oauth2-client-example/main.go](cmd/groupcache-oauth2-client-example/main.go).
+// initialize groupcache and return workspace.
+// see the example client for an implementation of this function.
+groupcacheWorkspace := startGroupcache()
+
+options := clientcredentials.Options{
+    TokenURL:                        tokenURL,
+    ClientID:                        clientID,
+    ClientSecret:                    clientSecret,
+    Scope:                           scope,
+    HTTPClient:                      http.DefaultClient,
+    GroupcacheWorkspace:             groupcacheWorkspace,
+}
+
+client := clientcredentials.New(options)
+
+// use client to make requests, it will automatically fetch and cache tokens.
+// client.Do automatically manages token retrieval, caching, and background refreshing.
+resp, errDo = client.Do(req)
+```
 
 # Test with example client
 
