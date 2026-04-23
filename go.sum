@@ -28,8 +28,10 @@ github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8 h1:u+kxnRXxx+
 github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8/go.mod h1:6M53rd6DvbzoLbFnL3bjCsDSkCYh4i2yqW04hxr1/5o=
 github.com/udhos/groupcache_exporter v1.3.9 h1:CAyJTQ4zMhXK1slEjPlEe/aTkrmDXhORLzXbIPPq5v8=
 github.com/udhos/groupcache_exporter v1.3.9/go.mod h1:knwJGipgDckZuzis00/LXj3L/FiTEL7kM6B7M8vss9k=
-github.com/udhos/oauth2clientcredentials v1.0.3 h1:CUC5t5NnbfZvYeGkM4HiEOa+mJy6jkyHXE2JbFqhod4=
-github.com/udhos/oauth2clientcredentials v1.0.3/go.mod h1:YsZRBKdQtpI/nBZ+nwVWXd4k4SbfPpobal0bHcJ8xcM=
+github.com/udhos/oauth2clientcredentials v1.0.4 h1:vmH1kFYSp7qSxvu8t1nZ7FF/CLfpPGQMihyd118Ehkw=
+github.com/udhos/oauth2clientcredentials v1.0.4/go.mod h1:0kYTGC8OF+ppUhJON3WBV53TLLBeO+t93Irhlt+m400=
+github.com/valyala/fastjson v1.6.10 h1:/yjJg8jaVQdYR3arGxPE2X5z89xrlhS0eGXdv+ADTh4=
+github.com/valyala/fastjson v1.6.10/go.mod h1:e6FubmQouUNP73jtMLmcbxS6ydWIpOfhz34TSfO3JaE=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.yaml.in/yaml/v2 v2.4.4 h1:tuyd0P+2Ont/d6e2rl3be67goVK4R6deVxCUX5vyPaQ=
