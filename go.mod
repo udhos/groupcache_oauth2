@@ -1,13 +1,13 @@
 module github.com/udhos/groupcache_oauth2
 
-go 1.25.9 // minimum
+go 1.25.10 // minimum
 
-toolchain go1.26.2 // preferred
+toolchain go1.26.3 // preferred
 
 require (
-	github.com/modernprogram/groupcache/v2 v2.7.14
+	github.com/modernprogram/groupcache/v2 v2.7.18
 	github.com/prometheus/client_golang v1.23.2
-	github.com/udhos/groupcache_exporter v1.3.9
+	github.com/udhos/groupcache_exporter v1.3.10
 	github.com/udhos/oauth2clientcredentials v1.0.4
 )
 
@@ -22,6 +22,6 @@ require (
 	github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
