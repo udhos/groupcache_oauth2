@@ -9,7 +9,7 @@ import (
 
 func startGroupcache() *groupcache.Workspace {
 
-	workspace := groupcache.NewWorkspace()
+	workspace := groupcache.NewWorkspace(groupcache.DefaultResponseHeaderTimeout)
 
 	//
 	// create groupcache pool
@@ -21,7 +21,7 @@ func startGroupcache() *groupcache.Workspace {
 
 	log.Printf("groupcache my URL: %s", myURL)
 
-	pool := groupcache.NewHTTPPoolOptsWithWorkspace(workspace, myURL, &groupcache.HTTPPoolOptions{})
+	pool := groupcache.NewHTTPPoolOpts(workspace, myURL, &groupcache.HTTPPoolOptions{})
 
 	//
 	// start groupcache server

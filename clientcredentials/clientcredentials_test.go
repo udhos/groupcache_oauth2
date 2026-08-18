@@ -716,7 +716,7 @@ func newClient(tokenURL, clientID, clientSecret string, softExpire int,
 		Scope:                           "scope1 scope2",
 		HTTPClient:                      http.DefaultClient,
 		SoftExpireInSeconds:             softExpire,
-		GroupcacheWorkspace:             groupcache.NewWorkspace(),
+		GroupcacheWorkspace:             groupcache.NewWorkspace(groupcache.DefaultResponseHeaderTimeout),
 		GetCredentialsFromRequestHeader: credsFromHeader,
 		Debug:                           true,
 	}
